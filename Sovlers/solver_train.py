@@ -152,8 +152,8 @@ class TrainSolver(object):
            
             tot_EPE_ref += train_EPE_left_ref
             tot_EPE_coarse += train_EPE_left_coarse
-            print(
-                    '[{:d}/{:d}] Train Loss = {:.6f}, Avg. Train Loss = {:.3f}, EPE_ref = {:.3f} px, EPE_coarse = {:.3f}, Avg. EPE_ref = {:.3f} px, Avg. EPE_coarse = {:.3f} px, 3PE = {:.3f}%, time = {:.3f}s.'.format(
+            print('[{:d}/{:d}] Train Loss = {:.6f}, Avg. Train Loss = {:.3f}, EPE_ref = {:.3f} px, EPE_coarse = {:.3f}, Avg. EPE_ref = {:.3f} px, Avg. EPE_coarse = {:.3f} px, 3PE = {:.3f}%, time = {:.3f}s.'.format
+                (
                     self.global_step, self.cfg_solver['max_steps'],
                     loss_hist,
                     tot_loss / ((self.global_step % print_info) + 1),
@@ -163,10 +163,10 @@ class TrainSolver(object):
                     tot_EPE_coarse / ((self.global_step % print_info) + 1),
                     train_3PE_left * 100,
                     elapsed
-                ), end='\r'
+                )
             )
+
             self.scheduler.step()
-              
             if self.global_step % self.cfg_solver['save_steps'] == 0 and not self.reloaded:
                 self.save_checkpoint()
                 print('')

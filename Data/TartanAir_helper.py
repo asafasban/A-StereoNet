@@ -54,23 +54,27 @@ def read_tartanair(filepath):
     test_right_img = []
     test_left_deps = []
 
+    leftPrefix = 'image_left'
+    rightPrefix = 'image_left'
+    leftDepthPrefix = 'image_left'
+
     for seq in train_seqs:
-        imgs = os.listdir(os.path.join(seq, 'cam0_on', 'data'))
+        imgs = os.listdir(os.path.join(seq, leftPrefix))
         imgs.sort()
         for im in imgs:
-            if is_image_file(im) and (os.path.exists(os.path.join(seq, 'cam1_on', 'data', im))) and (os.path.exists(os.path.join(seq, 'depth0', 'data', im))):
-                all_left_img.append(seq + '/cam0_on/data/' + im)
-                all_right_img.append(seq + '/cam1_on/data/' + im)
-                all_left_deps.append(seq + '/depth0/data/' + im)
+            if is_image_file(im) and (os.path.exists(os.path.join(seq, rightPrefix, im))) and (os.path.exists(os.path.join(seq, leftDepthPrefix, im))):
+                all_left_img.append(os.path.join(seq, leftPrefix, im))
+                all_right_img.append(os.path.join(seq, rightPrefix, im))
+                all_left_deps.append(os.path.join(seq, leftDepthPrefix, im))
 
     for seq in test_seqs:
-        imgs = os.listdir(os.path.join(seq, 'cam0_on', 'data'))
+        imgs = os.listdir(os.path.join(seq, leftPrefix))
         imgs.sort()
         for im in imgs:
-            if is_image_file(im) and (os.path.exists(os.path.join(seq, 'cam1_on', 'data', im))) and (os.path.exists(os.path.join(seq, 'depth0', 'data', im))):
-                test_left_img.append(seq + '/cam0_on/data/' + im)
-                test_right_img.append(seq + '/cam1_on/data/' + im)
-                test_left_deps.append(seq + '/depth0/data/' + im)
+            if is_image_file(im) and (os.path.exists(os.path.join(seq, rightPrefix, im))) and (os.path.exists(os.path.join(seq, leftDepthPrefix, im))):
+                test_left_img.append(os.path.join(seq, leftPrefix, im))
+                test_right_img.append(os.path.join(seq, rightPrefix, im))
+                test_left_deps.append(os.path.join(seq, leftDepthPrefix, im))
 
     print("Number of training images: ", len(all_left_img))
     print("Number of testing images: ", len(test_left_img))

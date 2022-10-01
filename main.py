@@ -36,7 +36,7 @@ def main():
     
     # Parse arguments.
     parser = argparse.ArgumentParser()
-    parser.add_argument('--options', type=str, help='Path to the option JSON file.', default='./Options/example.json')
+    parser.add_argument('--options', type=str, help='Path to the option JSON file.', default='./Options/MyOwnTartan.json')
     args = parser.parse_args()
     opt = parse_opt(args.options)
     
