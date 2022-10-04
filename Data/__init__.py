@@ -68,7 +68,7 @@ def get_dataset_loader(config, dset):
         raise NotImplementedError('Mode [{:s}] is not supported.'.format(cfg_mode))
 
 def create_dataset(cfg_data, mode, dset):
-    
+    cropSize = cfg_data['crop_size']
     data_root = cfg_data['data_root']
     npy_root = cfg_data['npy_root']
     test_split = cfg_data['test_split']
@@ -85,6 +85,6 @@ def create_dataset(cfg_data, mode, dset):
             T.ToTensor(),
             T.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0))
         ])
-        return TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode)
+        return TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode, cropSize)
     else:
         raise NotImplementedError("Can't create dataset [{:s}].".format(dset))

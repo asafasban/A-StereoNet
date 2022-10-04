@@ -10,11 +10,11 @@
     "lr_invalidation": true,
     
     "data": {
-       "data_root": "D:/ActiveStereoNetTartanDatasetVersion/TartanDatasetRepository/tartanOrganized",
+       "data_root": "D:/TartanDatasetRepository/tartanOrganized",
        "npy_root": "./Data",
        "test_split": 0.1,
        "val_split": 1.0,
-       "crop_size": [512, 480]
+       "crop_size": [500, 400]
     },
     
     "model": {
@@ -25,21 +25,40 @@
     },
     
     "solver": {
-        "batch_size": 1,
-        "accumulate": 3,
+        "batch_size": 2,
+        "accumulate":2,
         "refine_head_weight": 0.75,
         "lcn_weight": 1.0,
-        "cross_entropy_weight": 0.01,
+        "cross_entropy_weight": 0.001,
         "optimizer_type": "RMSProp",
-        "lr_init": 1e-4,
+        "lr_init": 1e-5,
         "gamma": 0.5,
-        "milestones": [60000, 100000],
+        "milestones": [30000, 55000],
         "eval_steps": 20000,
-        "save_steps": 5000,
-        "max_steps": 120000,
+        "save_steps": 1000,
+        "max_steps": 80000,
         "exp_prefix": "Experiments",
-        "save_eval": false,
-        "resume_iter": 0,
+        "save_eval": true,
+        "resume_iter": 20000,
         "model_name": "tartanair/unsupervised"
     }
+//,
+//    "solver_copy": {
+//        "batch_size": 2,
+//        "accumulate": 1,
+//        "refine_head_weight": 0.75,
+//        "lcn_weight": 1.0,
+//        "cross_entropy_weight": 0.01,
+//        "optimizer_type": "RMSProp",
+//        "lr_init": 3e-6,
+//        "gamma": 0.5,
+//        "milestones": [20000, 45000],
+//        "eval_steps": 10000,
+//        "save_steps": 2500,
+//        "max_steps": 60000,
+//        "exp_prefix": "Experiments",
+//        "save_eval": false,
+//        "resume_iter": 0,
+//        "model_name": "tartanair/unsupervised"
+//    }
 }

@@ -32,7 +32,7 @@ from .TartanAir_helper import read_tartanair
 
 class TartanAirDataset(Dataset):
 
-    def __init__(self, data_root, npy_root, val_split, test_split, transform, phase):
+    def __init__(self, data_root, npy_root, val_split, test_split, transform, phase, cropSize):
 
         super(TartanAirDataset, self).__init__()
 
@@ -47,7 +47,7 @@ class TartanAirDataset(Dataset):
         self.focal_length = 320.0 # in pixels
         self.baseline = 0.25 # in meters
         self.curr_index = 0 # current_index 
-        self.crop = True
+        self.cropSize = cropSize
 
         self.left_imgs, self.right_imgs, self.deps, self.test_left_imgs, self.test_right_imgs, self.test_deps = read_tartanair(self.data_root)
 
@@ -117,9 +117,20 @@ class TartanAirDataset(Dataset):
             except IOError as e:
                 print('[IOError] {}, keep trying...'.format(e))
                 attempt = True
+
+        width, height = img.size
+        # Setting the points for cropped image
+        left = width/2 - self.cropSize[0]/2
+        top = height/2 - self.cropSize[1]/2
+        right = width/2 + self.cropSize[0]/2
+        bottom = height/2 + self.cropSize[1]/2
+
+        # Cropped image of above dimension
+        # (It will not change original image)
+        img = img.crop((left, top, right, bottom))
         img = np.asarray(img)
-        if self.crop:
-            img = img[:, 128:, :]
+        # if self.crop:
+        #     img = img[:, 128:, :]
         return img
 
     def _read_as_disp(self, filename):
@@ -133,10 +144,19 @@ class TartanAirDataset(Dataset):
             except IOError as e:
                 print('[IOError] {}, keep trying...'.format(e))
                 attempt = True
-        dep = np.asarray(dep) / 1000.0 # convert mm to meters
+
+        width, height = dep.size
+        left = width / 2 - self.cropSize[0] / 2
+        top = height / 2 - self.cropSize[1] / 2
+        right = width / 2 + self.cropSize[0] / 2
+        bottom = height / 2 + self.cropSize[1] / 2
+        disp = dep.crop((left, top, right, bottom))
+        dep = np.asarray(disp) / 1000.0 # convert mm to meters
         disp = self._dep_to_disp(dep)
-        if self.crop:
-            disp = disp[:, :, 128:]
+
+
+        # if self.crop:
+        #     disp = disp[:, :, 128:]
         return disp
 
     def _get_seqname(self):

@@ -33,9 +33,11 @@ from Losses import get_losses
 from Metrics.metrics import epe_metric
 from Metrics.metrics import tripe_metric
 from Metrics.metrics import epe_metric_non_zero
-
+from torch.utils.tensorboard import SummaryWriter
+import torchvision
 import numpy as np
 from matplotlib import pyplot as plt
+from torchsummary import summary
 
 class TrainSolver(object):
 
@@ -46,7 +48,7 @@ class TrainSolver(object):
         self.cfg_dataset = config['data']
         self.cfg_model = config['model']
         self.reloaded = True if self.cfg_solver['resume_iter'] > 0 else False
-
+        self.writer = SummaryWriter()
         self.max_disp = self.cfg_model['max_disp']
         self.loss_name = self.cfg_model['loss']
         self.train_loader, self.val_loader = get_loader(self.config)
@@ -98,6 +100,8 @@ class TrainSolver(object):
         self.scheduler.load_state_dict(states['scheduler_state'])
 
     def run(self):
+        # summary(model, [(1, 16, 16), (1, 28, 28)])
+        print(self.model)
         self.model = nn.DataParallel(self.model)
         self.model.cuda()
         
@@ -131,8 +135,6 @@ class TrainSolver(object):
             self.model.train()
             imgL, imgR, disp_L, _ = data_batch
             imgL, imgR, disp_L = imgL.cuda(), imgR.cuda(), disp_L.cuda()
-            
-
             disp_pred_ref_left, disp_pred_coarse_left, disp_pred_ref_right, disp_pred_coarse_right = self.model(imgL, imgR, disp_L, True)
             
             loss = (refine_weight * self.crit(imgL, imgR, disp_pred_ref_left, disp_pred_ref_right, disp_L, sample_wei)) + ((1 - refine_weight) * self.crit(imgL, imgR, disp_pred_coarse_left, disp_pred_coarse_right, disp_L, sample_wei))
@@ -140,11 +142,17 @@ class TrainSolver(object):
             tot_loss += loss_hist
             loss /= self.cfg_solver['accumulate']
             loss.backward()
-            
+
+            images = torchvision.utils.make_grid([imgL[0], imgR[0]])
+            leftAndGtDisp = torchvision.utils.make_grid([disp_pred_ref_left[0], disp_L[0]])
+            self.writer.add_image("images", images, self.global_step)
+            self.writer.add_image("disp", leftAndGtDisp, self.global_step)
+            self.writer.add_scalar('Loss/Train', loss, self.global_step)
+
             if self.global_step % self.cfg_solver['accumulate'] == 0:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
-            
+            self.optimizer.step()
             elapsed = time.time() - start_time
             train_EPE_left_ref = epe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
             train_3PE_left = tripe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
