@@ -100,7 +100,14 @@ class TrainSolver(object):
         self.scheduler.load_state_dict(states['scheduler_state'])
 
     def run(self):
-        # summary(model, [(1, 16, 16), (1, 28, 28)])
+        # self.model.CoarseNet.conv3d_5.register_forward_hook(get_activation('coarse conv3d_5 before upsample'))
+        self.model.CoarseNet.disp_reg.register_forward_hook(get_activation('coarse activation maps distribution (full disparity values)'))
+
+        #  edge disparity detection refine ( disparity added to coarse disparity map )
+        # self.model.RefineNet.resblock2_s1.register_forward_hook(get_activation('refine left image stream activations'))
+        # self.model.RefineNet.resblock2_s2.register_forward_hook(get_activation('refine upsampled disparity stream activations'))
+        self.model.RefineNet.conv2.register_forward_hook(get_activation('refine activation map distribution (full disparity values)'))
+
         print(self.model)
         self.model = nn.DataParallel(self.model)
         self.model.cuda()
@@ -148,6 +155,9 @@ class TrainSolver(object):
             self.writer.add_image("images", images, self.global_step)
             self.writer.add_image("disp", leftAndGtDisp, self.global_step)
             self.writer.add_scalar('Loss/Train', loss, self.global_step)
+
+            self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)
+            self.writer.add_histogram("refine out", activation['refine activation map distribution (full disparity values)'], self.global_step)
 
             if self.global_step % self.cfg_solver['accumulate'] == 0:
                 self.optimizer.step()
@@ -275,3 +285,11 @@ class TrainSolver(object):
             self.global_step += 1
 
             self.reloaded = False
+
+
+activation = {}
+def get_activation(name):
+    def hook(model, input, output):
+        activation[name] = output.detach()
+    return hook
+

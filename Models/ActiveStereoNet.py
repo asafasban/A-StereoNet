@@ -84,16 +84,16 @@ class CoarseNet(nn.Module):
         self.disp_reg = DisparityRegression(self.maxdisp)
 
     def costVolume(self, refimg_fea, targetimg_fea, views):
-        #Cost Volume
+        #Cost Volume size(batch, depth, maxDisp, height, width) - check why this order?????
         cost = torch.zeros(refimg_fea.size()[0], refimg_fea.size()[1]*2, self.maxdisp//self.scale_factor, refimg_fea.size()[2], refimg_fea.size()[3]).cuda()
         views = views.lower()
         if views == 'left':
             for i in range(self.maxdisp//self.scale_factor):
                 if i > 0:
-                    cost[:, :refimg_fea.size()[1], i, :, i:] = refimg_fea[:,:,:,i:]
-                    cost[:, refimg_fea.size()[1]:, i, :, i:] = targetimg_fea[:,:,:,:-i]
+                    cost[:, :refimg_fea.size()[1], i, :, i:] = refimg_fea[:, :, :, i:]
+                    cost[:, refimg_fea.size()[1]:, i, :, i:] = targetimg_fea[:, :, :, :-i]
                 else:
-                    cost[:, :refimg_fea.size()[1], i, :,:] = refimg_fea
+                    cost[:, :refimg_fea.size()[1], i, :, :] = refimg_fea
                     cost[:, refimg_fea.size()[1]:, i, :,:] = targetimg_fea
         elif views == 'right':
             for i in range(self.maxdisp // self.scale_factor):
@@ -111,10 +111,10 @@ class CoarseNet(nn.Module):
         cost = self.conv3d_3(cost) + cost
         cost = self.conv3d_4(cost) + cost
         
-        cost = self.conv3d_5(cost)
-        cost = F.interpolate(cost, size=[self.maxdisp, self.img_shape[1], self.img_shape[0]], mode='trilinear', align_corners=False)
-        pred = cost.softmax(dim=2).squeeze(dim=1)
-        pred = self.disp_reg(pred)
+        cost = self.conv3d_5(cost) # before for every depth/activation(32) we had 144/18 scores of disparity. after this layer it has 1 activation per disparity option
+        cost = F.interpolate(cost, size=[self.maxdisp, self.img_shape[1], self.img_shape[0]], mode='trilinear', align_corners=False) # upsample to [batch, depth=1, width, height]
+        pred = cost.softmax(dim=2).squeeze(dim=1) # create probability for each disparity value
+        pred = self.disp_reg(pred)                # wieghted sum probability with disparity!
 
         return pred
 
@@ -138,6 +138,7 @@ class CoarseNet(nn.Module):
         
 class RefineNet(nn.Module):
     def __init__(self):
+        # edge detector
         super(RefineNet, self).__init__()
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 

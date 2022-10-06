@@ -42,12 +42,12 @@ class TartanAirDataset(Dataset):
         self.val_split = val_split
         self.test_split = test_split
         self.transform = transform
-        self.min_depth = .05 # in meters
-        self.max_depth = 20.0
+        self.min_depth = .01 # in meters // 10 cm (100mm)
+        self.max_depth = 20.0        # // 20000 mm
         self.focal_length = 320.0 # in pixels
-        self.baseline = 0.25 # in meters
+        self.baseline = 0.25 # in meters    //250 mm
         self.curr_index = 0 # current_index 
-        self.cropSize = cropSize
+        self.cropSize = cropSize # croppingSize
 
         self.left_imgs, self.right_imgs, self.deps, self.test_left_imgs, self.test_right_imgs, self.test_deps = read_tartanair(self.data_root)
 

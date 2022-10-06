@@ -31,7 +31,7 @@
         "lcn_weight": 1.0,
         "cross_entropy_weight": 0.001,
         "optimizer_type": "RMSProp",
-        "lr_init": 1e-5,
+        "lr_init": 1e-3,
         "gamma": 0.5,
         "milestones": [30000, 55000],
         "eval_steps": 20000,
@@ -39,7 +39,7 @@
         "max_steps": 80000,
         "exp_prefix": "Experiments",
         "save_eval": true,
-        "resume_iter": 20000,
+        "resume_iter": 25000,
         "model_name": "tartanair/unsupervised"
     }
 //,

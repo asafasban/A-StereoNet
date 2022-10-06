@@ -105,9 +105,7 @@ class DisparityRegression(nn.Module):
             [1, maxdisp, 1, 1]
             )).cuda().float().requires_grad_(False)
     
-    def forward(self, x):
-        
-        y = x.mul(self.disp).sum(dim=1, keepdim=True)
-       
+    def forward(self, x):# x size [batch, disparity(144), width, height]
+        y = x.mul(self.disp).sum(dim=1, keepdim=True)   # meaning every disparity times the value (meaning weighted sum!!!)
         return y
 
