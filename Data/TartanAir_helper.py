@@ -55,26 +55,34 @@ def read_tartanair(filepath):
     test_left_deps = []
 
     leftPrefix = 'image_left'
-    rightPrefix = 'image_left'
-    leftDepthPrefix = 'image_left'
+    rightPrefix = 'image_right'
+    leftDepthPrefix = 'depth_left'
 
     for seq in train_seqs:
-        imgs = os.listdir(os.path.join(seq, leftPrefix))
-        imgs.sort()
-        for im in imgs:
-            if is_image_file(im) and (os.path.exists(os.path.join(seq, rightPrefix, im))) and (os.path.exists(os.path.join(seq, leftDepthPrefix, im))):
-                all_left_img.append(os.path.join(seq, leftPrefix, im))
-                all_right_img.append(os.path.join(seq, rightPrefix, im))
-                all_left_deps.append(os.path.join(seq, leftDepthPrefix, im))
+        leftDir = os.path.join(seq, leftPrefix)
+        rightDir = os.path.join(seq, rightPrefix)
+        depthLeftDir = os.path.join(seq, leftDepthPrefix)
+        for img in os.listdir(leftDir):
+            all_left_img.append(os.path.join(seq, leftPrefix, img))
+
+        for img in os.listdir(rightDir):
+            all_right_img.append(os.path.join(seq, rightDir, img))
+
+        for img in os.listdir(depthLeftDir):
+            all_left_deps.append(os.path.join(seq, depthLeftDir, img))
 
     for seq in test_seqs:
-        imgs = os.listdir(os.path.join(seq, leftPrefix))
-        imgs.sort()
-        for im in imgs:
-            if is_image_file(im) and (os.path.exists(os.path.join(seq, rightPrefix, im))) and (os.path.exists(os.path.join(seq, leftDepthPrefix, im))):
-                test_left_img.append(os.path.join(seq, leftPrefix, im))
-                test_right_img.append(os.path.join(seq, rightPrefix, im))
-                test_left_deps.append(os.path.join(seq, leftDepthPrefix, im))
+        leftDir = os.path.join(seq, leftPrefix)
+        rightDir = os.path.join(seq, rightPrefix)
+        depthLeftDir = os.path.join(seq, leftDepthPrefix)
+        for img in os.listdir(leftDir):
+            test_left_img.append(os.path.join(seq, leftPrefix, img))
+
+        for img in os.listdir(rightDir):
+            test_right_img.append(os.path.join(seq, rightDir, img))
+
+        for img in os.listdir(depthLeftDir):
+            test_left_deps.append(os.path.join(seq, depthLeftDir, img))
 
     print("Number of training images: ", len(all_left_img))
     print("Number of testing images: ", len(test_left_img))
