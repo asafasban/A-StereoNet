@@ -15,21 +15,8 @@ This repository builds upon the open source pytorch [Active stereo net implement
 ## Dataset
 
 Datasets used:
-
-1. [D435i dataset (real data)](https://drive.google.com/file/d/10RpBacPfDK3jwqf0yYSm1ovHMN05OHWm/view?usp=sharing)
-2. [Active TartanAir dataset (virtual data)](https://drive.google.com/file/d/1hyYzBhzsl9uK8bfmIufC0EVpfjZ7GC_H/view?usp=sharing)
+Active TartanAir dataset (virtual data)
+IMX686 (active real data)
 
 Please, use the links provided to download the datasets and update the ```data_root``` field in the ```Options/*.json``` files.
-
-## Usage
-To train on D435i sequences:
-
-```
-sh d435i.sh
-```
-
-To train on Active Tartanair sequences:
-
-```
-sh tartanair.sh
-```
+My take off slamcore version
