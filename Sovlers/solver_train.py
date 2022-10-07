@@ -44,6 +44,10 @@ class TrainSolver(object):
     def __init__(self, config):
 
         self.config = config
+
+        from datetime import datetime
+        self.sessionTimeStamp = datetime.now().strftime("%H:%M:%S")
+        print("start session time = ", self.sessionTimeStamp)
         self.cfg_solver = config['solver']
         self.cfg_dataset = config['data']
         self.cfg_model = config['model']
@@ -125,7 +129,7 @@ class TrainSolver(object):
         tot_EPE_coarse = 0.0
         sample_weight = 1.0
         refine_weight = self.cfg_solver['refine_head_weight']
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad() # optimizing performance of optimizer (memory wise)
         while True:
             try:
                 data_batch = data_iter.next()
@@ -162,7 +166,7 @@ class TrainSolver(object):
             if self.global_step % self.cfg_solver['accumulate'] == 0:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
-            self.optimizer.step()
+
             elapsed = time.time() - start_time
             train_EPE_left_ref = epe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
             train_3PE_left = tripe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
