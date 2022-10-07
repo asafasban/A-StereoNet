@@ -1,2 +1,2 @@
-start /B tensorboard.exe --logdir "./"
+start /B tensorboard.exe --logdir "./runs"
 pause

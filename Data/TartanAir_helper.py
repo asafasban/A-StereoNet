@@ -62,14 +62,23 @@ def read_tartanair(filepath):
         leftDir = os.path.join(seq, leftPrefix)
         rightDir = os.path.join(seq, rightPrefix)
         depthLeftDir = os.path.join(seq, leftDepthPrefix)
+        leftCnt = 0
+        rightCnt = 0
+        dispCnt = 0
         for img in os.listdir(leftDir):
+            leftCnt+=1
             all_left_img.append(os.path.join(seq, leftPrefix, img))
 
         for img in os.listdir(rightDir):
+            rightCnt+=1
             all_right_img.append(os.path.join(seq, rightDir, img))
 
         for img in os.listdir(depthLeftDir):
+            dispCnt+=1
             all_left_deps.append(os.path.join(seq, depthLeftDir, img))
+
+        if (leftCnt != rightCnt or leftCnt != dispCnt or rightCnt != dispCnt):
+            print("diff detect for seq ", seq)
 
     for seq in test_seqs:
         leftDir = os.path.join(seq, leftPrefix)

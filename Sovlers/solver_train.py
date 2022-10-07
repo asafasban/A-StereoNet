@@ -217,6 +217,7 @@ class TrainSolver(object):
 
                         start_time = time.time()
                         ref_pred_left, coarse_pred_left, _, _ = self.model(imgL, imgR, disp_L, False)
+
                         elapsed += (time.time() - start_time)
                         N_total += N_curr
                         is_valid = (disp_L > 0).float().mean() > 0.5
