@@ -1,0 +1,64 @@
+{
+    "mode":"train",
+    "deterministic": false,
+    "gpu_ids": "0",
+    "cpu_threads": "4",
+    "dataset_name": "TartanAir",
+    "imshow": false,
+    "save": true,
+    "video": false,
+    "lr_invalidation": true,
+    
+    "data": {
+       "data_root": "D:\\TartanDatasetRepository\\tartanOrganized",
+       "npy_root": "./Data",
+       "test_split": 0.1,
+       "val_split": 1.0,
+       "crop_size": [500, 400]
+    },
+    
+    "model": {
+        "which_model": "ActiveStereoNet",
+        "max_disp": 144,
+        "scale_factor": 8,
+        "loss": "XTLoss"
+    },
+    
+    "solver": {
+        "batch_size": 2,
+        "accumulate": 3,
+        "refine_head_weight": 0.75,
+        "lcn_weight": 1.0,
+        "cross_entropy_weight": 0.01,
+        "optimizer_type": "RMSProp",
+        "lr_init": 1e-5,
+        "gamma": 0.5,
+        "milestones": [60000, 100000],
+        "eval_steps": 2000,
+        "save_steps": 500,
+        "max_steps": 20000,
+        "exp_prefix": "Experiments",
+        "save_eval": true,
+        "resume_iter": 500,
+        "model_name": "tartanair/unsupervised"
+    }
+//,
+//    "solver_copy": {
+//        "batch_size": 2,
+//        "accumulate": 1,
+//        "refine_head_weight": 0.75,
+//        "lcn_weight": 1.0,
+//        "cross_entropy_weight": 0.01,
+//        "optimizer_type": "RMSProp",
+//        "lr_init": 3e-6,
+//        "gamma": 0.5,
+//        "milestones": [20000, 45000],
+//        "eval_steps": 10000,
+//        "save_steps": 2500,
+//        "max_steps": 60000,
+//        "exp_prefix": "Experiments",
+//        "save_eval": false,
+//        "resume_iter": 0,
+//        "model_name": "tartanair/unsupervised"
+//    }
+}
