@@ -154,10 +154,18 @@ class TrainSolver(object):
             loss /= self.cfg_solver['accumulate']
             loss.backward()
 
+            refinedOut = disp_pred_ref_left[0].detach().cpu()
+            gt = disp_L[0].cpu()
+            mask = (refinedOut > self.max_disp) & (refinedOut < 0)            refinedOut[mask] = 0
+
+            gt = np.stack((disp_L[0].cpu() * (1.0 / gt.max()),) *3, axis=0).squeeze()
+            refinedOut = np.stack((refinedOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
+
             images = torchvision.utils.make_grid([imgL[0], imgR[0]])
-            leftAndGtDisp = torchvision.utils.make_grid([disp_pred_ref_left[0], disp_L[0]])
+            dispMaps = torchvision.utils.make_grid([torch.tensor(gt), torch.tensor(refinedOut)])
+
+            self.writer.add_image("dispMaps", dispMaps, self.global_step)
             self.writer.add_image("images", images, self.global_step)
-            self.writer.add_image("disp", leftAndGtDisp, self.global_step)
             self.writer.add_scalar('Loss/Train', loss, self.global_step)
 
             self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)

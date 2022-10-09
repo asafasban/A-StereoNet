@@ -85,10 +85,6 @@ class TartanAirDataset(Dataset):
             left_image = self._read_image(self.left_imgs[index])
             right_image = self._read_image(self.right_imgs[index])
             left_disp = self._read_as_disp(self.deps[index])
-            # print("left = ", self.left_imgs[index])
-            # print("right = ", self.right_imgs[index])
-            # print("disp = ", self.deps[index])
-            # print("\n\n")
         elif self.phase == 'val':
             index = self.val_list[index]
             left_image = self._read_image(self.test_left_imgs[index])
@@ -132,8 +128,6 @@ class TartanAirDataset(Dataset):
         # (It will not change original image)
         img = img.crop((left, top, right, bottom))
         img = np.asarray(img)
-        # if self.crop:
-        #     img = img[:, 128:, :]
         return img
 
     def _read_as_disp(self, filename):
@@ -143,7 +137,7 @@ class TartanAirDataset(Dataset):
             try:
                 with open(filename, 'rb') as f:
                     img_array = np.load(filename)
-                    dep = Image.fromarray(img_array)
+                    dep = Image.fromarray(img_array).convert('F')
                     # dep = Image.open(f).convert('F')
                 attempt = False
             except IOError as e:

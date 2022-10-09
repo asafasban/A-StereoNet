@@ -1,0 +1,24 @@
+HOSPITAL IS UNZIPPED TRANSFER IT!!!! AND ALSO OFFICE 2!!!!
+
+STOPPED AT 67K iterations.
+make sure all the lost above is completed before continuing!
+
+make sure all dataset disparity below 144!!!
+ADD EVALUATION LOSS TO TENESORBOARD
+ADD important layers weight to tensorboard
+BETTER UNDERSTAND EPE AND AVG EPE AND MAKE SURE DISP MAPS SEEN WELL!!!!!!
+UNDERSTAND WHY CONCATING IS GOOD IN COST VOLUME
+Start preparing shifted structured light images to make inside 144 disp max!
+
+
+
+
+
+
+
+
+make 3 evals bad -> stop!
+THE REFINE NETWORK IS WORKING BAD SINCE ALL FLAT TEXTURES ARE DETECT BUT REFINE IS BAD !!!!
+keep checkpoint with lowest avarage loss on evaluation set!
+change evaluation set to be a part of trained images and not different scene!
+disparity npy maybe change axis before display since it looks bad! -> maybe its not same data type causes this shit!@!!
