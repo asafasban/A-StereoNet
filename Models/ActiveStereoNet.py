@@ -147,7 +147,7 @@ class RefineNet(nn.Module):
         self.resblock1_s1 = ResBlock(16, 16, 3, 1, 1)
         self.resblock2_s1 = ResBlock(16, 16, 3, 1, 2)
 
-        # stream_2, upsampled low_resolution disp
+        # stream_2, upsampled coarse net output
         self.conv1_s2 = conv_block(1, 16, 1, 1)
         self.resblock1_s2 = ResBlock(16, 16, 3, 1, 1)
         self.resblock2_s2 = ResBlock(16, 16, 3, 1, 2)
@@ -158,6 +158,8 @@ class RefineNet(nn.Module):
         self.resblock5 = ResBlock(32, 32, 3, 1, 1)
         self.resblock6 = ResBlock(32, 32, 3, 1, 1)
         self.conv2 = conv_block(32, 1, 3, 1)
+        # concating sptially and convolving allow us to learn a metric.
+        # coarse disparity + original image convolved to produce a single disparity value!
 
     def forward(self, left_img, up_disp):
         
@@ -203,16 +205,13 @@ class ActiveStereoNet(nn.Module):
             left_tower = torch.flip(left_tower, dims=(3,))
             right_tower = torch.flip(right_tower, dims=(3,))
         coarseup_pred_left, coarseup_pred_right = self.CoarseNet(left_tower, right_tower, do_right)
-
         res_disp_left = self.RefineNet(left, coarseup_pred_left)
         ref_pred_left = nn.ReLU(False)(coarseup_pred_left + res_disp_left)
         coarseup_pred_left = nn.ReLU(False)(coarseup_pred_left)
-
         if do_right:
             res_disp_right = self.RefineNet(right, coarseup_pred_right)
             ref_pred_right = nn.ReLU(False)(coarseup_pred_right + res_disp_right)
             coarseup_pred_right = nn.ReLU(False)(coarseup_pred_right)
-            return ref_pred_left, coarseup_pred_left, ref_pred_right, coarseup_pred_right
+            return ref_pred_left, coarseup_pred_left, ref_pred_right, coarseup_pred_right, res_disp_left, res_disp_right
         else:
-            return ref_pred_left, coarseup_pred_left, ref_pred_left, coarseup_pred_left
-
+            return ref_pred_left, coarseup_pred_left, ref_pred_left, coarseup_pred_left, res_disp_left, res_disp_left

@@ -140,7 +140,7 @@ class XTLoss(nn.Module):
         loss = weight * ((1 - self.occluded_weight) * loss_valid + self.occluded_weight * loss_invalid)
 
         assert not torch.isnan(loss)
-        return loss
+        return loss, recon_img_left, recon_img_right
 
 
     def LCN(self, img, kSize):
@@ -170,9 +170,7 @@ class XTLoss(nn.Module):
         img = F.pad(img, [pad_len] * 4)
         Cost = F.pad(Cost, [pad_len] * 4)
         n, c, h, w = img.shape
-        
 
-        
         for i in range(kSize):
             for j in range(kSize):
                 tempGraph = torch.abs(img[:, :, pad_len : h - pad_len, pad_len : w - pad_len] - img[:, :, i:i + h - pad_len * 2, j:j + w - pad_len * 2])

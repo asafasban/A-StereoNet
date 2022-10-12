@@ -3,6 +3,17 @@ HOSPITAL IS UNZIPPED TRANSFER IT!!!! AND ALSO OFFICE 2!!!!
 STOPPED AT 67K iterations.
 make sure all the lost above is completed before continuing!
 
+--- CHECK IF RELU IN THE END ON THE SUMMATION KILLS THE GRADIENT AND THEN NEAURONS DOESNT GET UPDATED!
+
+0) check online how to test if my layers learn or not by their distribution, how to see if gradient is sufficient!!!
+1) read the article, make sure everything in place and all the EPE and loss are understood, why concat and the whole logic behind the architecture.
+2) coarse is pretty uniform, why?
+3) refine is noisy, why?
+4) maybe tensorboard coarse and refine alone (and not the summation? - why concating and convolving should work? why does convolving them help the disparity inference...)
+5) add to tensor board the refined and the coarse and only then the summation...
+
+
+
 make sure all dataset disparity below 144!!!
 ADD EVALUATION LOSS TO TENESORBOARD
 ADD important layers weight to tensorboard
@@ -10,15 +21,16 @@ BETTER UNDERSTAND EPE AND AVG EPE AND MAKE SURE DISP MAPS SEEN WELL!!!!!!
 UNDERSTAND WHY CONCATING IS GOOD IN COST VOLUME
 Start preparing shifted structured light images to make inside 144 disp max!
 
+- BATCH NORM IS DISABLED HERE, maybe add batch norm on some of the conv blocks before the leakey relu
+- add dropout? 
 
 
 
 
+Stochastic gradient descent (often abbreviated SGD) is an iterative method for optimizing an objective function with suitable smoothness properties 
+(e.g. differentiable or subdifferentiable). It can be regarded as a stochastic approximation of gradient descent optimization, since it replaces the
+ actual gradient (calculated from the entire data set) by an estimate thereof (calculated from a randomly selected subset of the data).
+ Especially in high-dimensional optimization problems this reduces the very high computational burden, achieving faster iterations in trade for a lower convergence rate.[1]
 
-
-
-make 3 evals bad -> stop!
-THE REFINE NETWORK IS WORKING BAD SINCE ALL FLAT TEXTURES ARE DETECT BUT REFINE IS BAD !!!!
-keep checkpoint with lowest avarage loss on evaluation set!
-change evaluation set to be a part of trained images and not different scene!
-disparity npy maybe change axis before display since it looks bad! -> maybe its not same data type causes this shit!@!!
+While the basic idea behind stochastic approximation can be traced back to the Robbins–Monro algorithm of the 1950s,
+ stochastic gradient descent has become an important optimization method in machine learning.[2]

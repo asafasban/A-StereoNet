@@ -57,7 +57,6 @@ class TrainSolver(object):
         self.loss_name = self.cfg_model['loss']
         self.train_loader, self.val_loader = get_loader(self.config)
         self.model = get_model(self.config)
-
         self.crit = get_losses(self.loss_name, max_disp=self.max_disp, lcn_weight=self.cfg_solver['lcn_weight'], occluded_weight=self.cfg_solver['cross_entropy_weight'])
 
         if self.cfg_solver['optimizer_type'].lower() == 'rmsprop':
@@ -108,10 +107,7 @@ class TrainSolver(object):
         self.model.CoarseNet.disp_reg.register_forward_hook(get_activation('coarse activation maps distribution (full disparity values)'))
 
         #  edge disparity detection refine ( disparity added to coarse disparity map )
-        # self.model.RefineNet.resblock2_s1.register_forward_hook(get_activation('refine left image stream activations'))
-        # self.model.RefineNet.resblock2_s2.register_forward_hook(get_activation('refine upsampled disparity stream activations'))
         self.model.RefineNet.conv2.register_forward_hook(get_activation('refine activation map distribution (full disparity values)'))
-
         print(self.model)
         self.model = nn.DataParallel(self.model)
         self.model.cuda()
@@ -146,32 +142,54 @@ class TrainSolver(object):
             self.model.train()
             imgL, imgR, disp_L, _ = data_batch
             imgL, imgR, disp_L = imgL.cuda(), imgR.cuda(), disp_L.cuda()
-            disp_pred_ref_left, disp_pred_coarse_left, disp_pred_ref_right, disp_pred_coarse_right = self.model(imgL, imgR, disp_L, True)
-            
-            loss = (refine_weight * self.crit(imgL, imgR, disp_pred_ref_left, disp_pred_ref_right, disp_L, sample_wei)) + ((1 - refine_weight) * self.crit(imgL, imgR, disp_pred_coarse_left, disp_pred_coarse_right, disp_L, sample_wei))
+            disp_pred_ref_left, disp_pred_coarse_left, disp_pred_ref_right, disp_pred_coarse_right, res_disp_left, res_disp_right = self.model(imgL, imgR, disp_L, True)
+
+            lossRefine, recon_img_left_ref, recon_img_right_ref = self.crit(imgL, imgR, disp_pred_ref_left, disp_pred_ref_right, disp_L, sample_wei)
+            lossCoarse, recon_img_left_coarse, recon_img_right_coarse = self.crit(imgL, imgR, disp_pred_coarse_left, disp_pred_coarse_right, disp_L, sample_wei)
+            loss = refine_weight * lossRefine + (1 - refine_weight) * lossCoarse
             loss_hist = loss.item()
             tot_loss += loss_hist
             loss /= self.cfg_solver['accumulate']
             loss.backward()
 
-            refinedOut = disp_pred_ref_left[0].detach().cpu()
             gt = disp_L[0].cpu()
-            mask = (refinedOut > self.max_disp) & (refinedOut < 0)            refinedOut[mask] = 0
+            coarseOut = disp_pred_coarse_left[0].detach().cpu()
+            mask = (coarseOut > self.max_disp) & (coarseOut < 0)
+            coarseOut[mask] = 0
+
+            overallOut = disp_pred_ref_left[0].detach().cpu()
+            mask = (overallOut > self.max_disp) & (overallOut < 0)
+            overallOut[mask] = 0
+
+            res_disp_left = res_disp_left[0].detach().cpu()
+            mask = (res_disp_left > self.max_disp) & (res_disp_left < 0)
+            res_disp_left[mask] = 0
 
             gt = np.stack((disp_L[0].cpu() * (1.0 / gt.max()),) *3, axis=0).squeeze()
-            refinedOut = np.stack((refinedOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
+            refinedOnlyOut = np.stack((res_disp_left * (1.0 / gt.max()),) *3, axis=0).squeeze()
+            overallOut = np.stack((overallOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
+            coarseOut = np.stack((coarseOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
 
-            images = torchvision.utils.make_grid([imgL[0], imgR[0]])
-            dispMaps = torchvision.utils.make_grid([torch.tensor(gt), torch.tensor(refinedOut)])
+            reconstructedImagesCoarse =  torchvision.utils.make_grid([imgL[0], recon_img_left_coarse[0], recon_img_left_ref[0]])
+            reconstructedImagesRefine =  torchvision.utils.make_grid([imgR[0], recon_img_left_ref[0], recon_img_right_ref[0]])
+            dispMaps = torchvision.utils.make_grid([torch.Tensor(gt), torch.tensor(overallOut), torch.Tensor(coarseOut), torch.tensor(refinedOnlyOut)])
 
-            self.writer.add_image("dispMaps", dispMaps, self.global_step)
-            self.writer.add_image("images", images, self.global_step)
             self.writer.add_scalar('Loss/Train', loss, self.global_step)
+            self.writer.add_image("gt | coarse+refine | coarse | refine", dispMaps, self.global_step)
+            self.writer.add_image("left gt, recon coarse, recon final", reconstructedImagesCoarse, self.global_step)
+            self.writer.add_image("right gt, recon coarse, recon final", reconstructedImagesRefine, self.global_step)
 
-            self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)
-            self.writer.add_histogram("refine out", activation['refine activation map distribution (full disparity values)'], self.global_step)
+            # self.writer.add_histogram("coarse weights before last", self.model.module.CoarseNet.conv3d_4[0].weight, self.global_step)
+            # self.writer.add_histogram("coarse weights last", self.model.module.CoarseNet.conv3d_5[0].weight, self.global_step)
+
+            # self.writer.add_histogram("refine weights before last", self.model.module.RefineNet.resblock6.conv[0].weight, self.global_step)
+            # self.writer.add_histogram("refine weights", self.model.module.RefineNet.conv2[0].weight, self.global_step)
+
+            # self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)
+            # self.writer.add_histogram("refine out", activation['refine activation map distribution (full disparity values)'], self.global_step)
 
             if self.global_step % self.cfg_solver['accumulate'] == 0:
+                log_gradients_in_model(self.model.module, self.writer, self.global_step)
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
@@ -179,7 +197,9 @@ class TrainSolver(object):
             train_EPE_left_ref = epe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
             train_3PE_left = tripe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
             train_EPE_left_coarse = epe_metric(disp_L.detach(), disp_pred_coarse_left.detach(), self.max_disp)
-           
+
+            self.writer.add_scalar('EPE overall prediction/Train', train_EPE_left_ref, self.global_step)
+
             tot_EPE_ref += train_EPE_left_ref
             tot_EPE_coarse += train_EPE_left_coarse
             print('[{:d}/{:d}] Train Loss = {:.6f}, Avg. Train Loss = {:.3f}, EPE_ref = {:.3f} px, EPE_coarse = {:.3f}, Avg. EPE_ref = {:.3f} px, Avg. EPE_coarse = {:.3f} px, 3PE = {:.3f}%, time = {:.3f}s.'.format
@@ -224,7 +244,7 @@ class TrainSolver(object):
                         N_curr = imgL.shape[0]
 
                         start_time = time.time()
-                        ref_pred_left, coarse_pred_left, _, _ = self.model(imgL, imgR, disp_L, False)
+                        ref_pred_left, coarse_pred_left, _, _, _, _= self.model(imgL, imgR, disp_L, False)
 
                         elapsed += (time.time() - start_time)
                         N_total += N_curr
@@ -305,4 +325,9 @@ def get_activation(name):
     def hook(model, input, output):
         activation[name] = output.detach()
     return hook
+
+def log_gradients_in_model(model, logger, step):
+    for tag, value in model.named_parameters():
+        if value.grad is not None and tag.find('weight') > 0:
+            logger.add_histogram(tag + "/grad", value.grad.cpu(), step)
 
