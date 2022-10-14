@@ -52,7 +52,7 @@ class TrainSolver(object):
         self.cfg_dataset = config['data']
         self.cfg_model = config['model']
         self.reloaded = True if self.cfg_solver['resume_iter'] > 0 else False
-        self.writer = SummaryWriter()
+        self.writer = None
         self.max_disp = self.cfg_model['max_disp']
         self.loss_name = self.cfg_model['loss']
         self.train_loader, self.val_loader = get_loader(self.config)
@@ -152,7 +152,16 @@ class TrainSolver(object):
             loss /= self.cfg_solver['accumulate']
             loss.backward()
 
-            gt = disp_L[0].cpu()
+            left = imgL[0].permute(1, 2, 0).cpu().detach().numpy()
+            right = imgR[0].permute(1, 2, 0).cpu().detach().numpy()
+            coarse = disp_pred_coarse_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            residual = res_disp_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            overall = disp_pred_ref_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            gt = disp_L[0].detach().cpu().squeeze().permute(0, 1).numpy()
+
+            # showImages([left, right, gt, coarse, residual, overall], 2, 3)
+
+            gt = np.stack((disp_L[0].cpu() * (1.0 / disp_L[0].cpu().max()),) * 3, axis=0).squeeze()
             coarseOut = disp_pred_coarse_left[0].detach().cpu()
             mask = (coarseOut > self.max_disp) & (coarseOut < 0)
             coarseOut[mask] = 0
@@ -165,7 +174,6 @@ class TrainSolver(object):
             mask = (res_disp_left > self.max_disp) & (res_disp_left < 0)
             res_disp_left[mask] = 0
 
-            gt = np.stack((disp_L[0].cpu() * (1.0 / gt.max()),) *3, axis=0).squeeze()
             refinedOnlyOut = np.stack((res_disp_left * (1.0 / gt.max()),) *3, axis=0).squeeze()
             overallOut = np.stack((overallOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
             coarseOut = np.stack((coarseOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
@@ -173,6 +181,9 @@ class TrainSolver(object):
             reconstructedImagesCoarse =  torchvision.utils.make_grid([imgL[0], recon_img_left_coarse[0], recon_img_left_ref[0]])
             reconstructedImagesRefine =  torchvision.utils.make_grid([imgR[0], recon_img_left_ref[0], recon_img_right_ref[0]])
             dispMaps = torchvision.utils.make_grid([torch.Tensor(gt), torch.tensor(overallOut), torch.Tensor(coarseOut), torch.tensor(refinedOnlyOut)])
+
+            if self.writer is None:
+                self.writer = SummaryWriter()
 
             self.writer.add_scalar('Loss/Train', loss, self.global_step)
             self.writer.add_image("gt | coarse+refine | coarse | refine", dispMaps, self.global_step)
@@ -331,3 +342,28 @@ def log_gradients_in_model(model, logger, step):
         if value.grad is not None and tag.find('weight') > 0:
             logger.add_histogram(tag + "/grad", value.grad.cpu(), step)
 
+def showImages(left, right, disp_L, estimatedDisp_L):
+    left_np = left.cpu().squeeze().permute(1, 2, 0).numpy()
+    right_np = right.cpu().squeeze().permute(1, 2, 0).numpy()
+    dispL_np = disp_L.cpu().squeeze().permute(0, 1).numpy()
+    estDispL_np = estimatedDisp_L.cpu().detach().squeeze().permute(0, 1).numpy()
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 4, 1)
+    ax2 = fig.add_subplot(1, 4, 2)
+    ax3 = fig.add_subplot(1, 4, 3)
+    ax4 = fig.add_subplot(1, 4, 4)
+    ax1.imshow(left_np,  cmap='gray')
+    ax2.imshow(right_np,  cmap='gray')
+    ax3.imshow(dispL_np,  cmap='gray')
+    ax4.imshow(estDispL_np,  cmap='gray')
+    plt.show()
+
+
+def showImages(data, rows, columns):
+    fig = plt.figure(figsize=(rows, columns), dpi=100)
+    axes = []
+    for i in range(1, columns * rows + 1):
+        element = data[i - 1]
+        axes.append(fig.add_subplot(rows, columns, i))
+        axes[i - 1].imshow(data[i - 1])
+    plt.show()

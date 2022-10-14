@@ -26,7 +26,7 @@ Start preparing shifted structured light images to make inside 144 disp max!
 
 
 
-
+SGD EXPLAIN:
 Stochastic gradient descent (often abbreviated SGD) is an iterative method for optimizing an objective function with suitable smoothness properties 
 (e.g. differentiable or subdifferentiable). It can be regarded as a stochastic approximation of gradient descent optimization, since it replaces the
  actual gradient (calculated from the entire data set) by an estimate thereof (calculated from a randomly selected subset of the data).
@@ -34,3 +34,23 @@ Stochastic gradient descent (often abbreviated SGD) is an iterative method for o
 
 While the basic idea behind stochastic approximation can be traced back to the Robbins–Monro algorithm of the 1950s,
  stochastic gradient descent has become an important optimization method in machine learning.[2]
+ 
+ 
+ 
+VANISHING EXPLODING GRADIENTS
+with tf.name_scope('train'): 
+optimizer = tf.train.AdamOptimizer() 
+# Get the gradient pairs (Tensor, Variable) 
+grads = optimizer.compute_gradients(cross_entropy) 
+# Update the weights wrt to the gradient 
+train_step = optimizer.apply_gradients(grads) 
+# Save the grads with tf.summary.histogram 
+for index, grad in enumerate(grads): 
+    tf.summary.histogram("{}-grad".format(grads[index][1].name), grads[index]) 
+Just in case you would like to understand the vanishing / exploding gradients from the values, you can simply follow the logic as below:
+
+If you face with exploding gradients, it will increase some of the weights dramatically high, which will eventually hit to NaN and will make loss NaN. Hence, that would be a typical output of an exploding gradient.
+If you face with vanishing gradient, you shall observe that the weights of all or some of the layers to be completely same over few iteration / epoch. Please note that you cannot really set a rule as "%X percent to
+ detect vanishing gradients", as the loss is based on the momentum and learning rate. Learning rate and/or momentum may be low enough to cause vanishing gradients for a while,
+ then if any of them gets high enough, it may break the vanishing gradient problem. What you aim in a proper training is smoothly changing histograms over iterations, rather than constant 
+ weights and bias distributions over time.

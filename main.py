@@ -32,22 +32,6 @@ import matplotlib.pyplot as plt
 from Options import parse_opt
 from Sovlers import get_solver
 
-# def showImages(left, right, disp_L, estimatedDisp_L):
-#     left_np = left.cpu().squeeze().permute(1, 2, 0).numpy()
-#     right_np = right.cpu().squeeze().permute(1, 2, 0).numpy()
-#     dispL_np = disp_L.cpu().squeeze().permute(0, 1).numpy()
-#     estDispL_np = estimatedDisp_L.cpu().detach().squeeze().permute(0, 1).numpy()
-#     fig = plt.figure()
-#     ax1 = fig.add_subplot(1, 4, 1)
-#     ax2 = fig.add_subplot(1, 4, 2)
-#     ax3 = fig.add_subplot(1, 4, 3)
-#     ax4 = fig.add_subplot(1, 4, 4)
-#     ax1.imshow(left_np,  cmap='gray')
-#     ax2.imshow(right_np,  cmap='gray')
-#     ax3.imshow(dispL_np,  cmap='gray')
-#     ax4.imshow(estDispL_np,  cmap='gray')
-#     plt.show()
-
 def showDispMap():
     fig = plt.figure()
     depthData = np.load(r'D:\TartanDatasetRepository\TartanDataset\train\carwelding\Hard\P002\depth_left\000000_left_depth.npy')
