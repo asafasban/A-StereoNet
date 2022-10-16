@@ -46,7 +46,7 @@ class TrainSolver(object):
         self.config = config
 
         from datetime import datetime
-        self.sessionTimeStamp = datetime.now().strftime("%H:%M:%S")
+        self.sessionTimeStamp = datetime.now().strftime("%d_%m___%H_%M_%S")
         print("start session time = ", self.sessionTimeStamp)
         self.cfg_solver = config['solver']
         self.cfg_dataset = config['data']
@@ -152,34 +152,74 @@ class TrainSolver(object):
             loss /= self.cfg_solver['accumulate']
             loss.backward()
 
-            left = imgL[0].permute(1, 2, 0).cpu().detach().numpy()
-            right = imgR[0].permute(1, 2, 0).cpu().detach().numpy()
-            coarse = disp_pred_coarse_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            residual = res_disp_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            overall = disp_pred_ref_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            gt = disp_L[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            if self.global_step % self.cfg_solver['SaveImagesInterval'] == 0:
+                dir = os.path.join(self.cfg_solver['exp_prefix'], self.cfg_solver['model_name'], 'saved figs', self.sessionTimeStamp)
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
 
+                fig, ax = plt.subplots(3, 3)
+                fig.set_size_inches(20, 20)
+
+                ax[0, 0].imshow(imgL[0].permute(1, 2, 0).cpu().detach().numpy());
+                ax[0, 0].set_title('left')
+
+                ax[0, 1].imshow(recon_img_left_ref[0].permute(1, 2, 0).cpu().detach().numpy());
+                ax[0, 1].set_title('reconstructed left')
+
+                ax[0, 2].imshow(np.abs(imgL[0].permute(1, 2, 0).cpu().detach().numpy() - recon_img_left_ref[0].permute(1, 2, 0).cpu().detach().numpy()))
+                ax[0, 2].set_title('left - reconstructed left')
+
+                ax[1, 0].imshow(imgR[0].permute(1, 2, 0).cpu().detach().numpy());
+                ax[1, 0].set_title('right')
+
+                ax[1, 1].imshow(recon_img_right_ref[0].permute(1, 2, 0).cpu().detach().numpy());
+                ax[1, 1].set_title('reconstructed right')
+
+                ax[1, 2].imshow(disp_L[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
+                ax[1, 2].set_title('GT disparity')
+
+                ax[2, 0].imshow(disp_pred_coarse_left[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
+                ax[2, 0].set_title('Coarse only right')
+
+                ax[2, 1].imshow(res_disp_left[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
+                ax[2, 1].set_title('refined only left')
+
+                ax[2, 2].imshow(disp_pred_ref_left[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp)
+                ax[2, 2].set_title('Coarse + Refine')
+
+                file = os.path.join(dir, str(self.global_step) + '_.png')
+                # plt.show()
+                fig.savefig(file)
+
+
+            # left = imgL[0].permute(1, 2, 0).cpu().detach().numpy()
+            # right = imgR[0].permute(1, 2, 0).cpu().detach().numpy()
+            # coarse = disp_pred_coarse_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            # residual = res_disp_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            # overall = disp_pred_ref_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
+            # gt = disp_L[0].detach().cpu().squeeze().permute(0, 1).numpy()
             # showImages([left, right, gt, coarse, residual, overall], 2, 3)
 
+            # gt = np.stack((disp_L[0].cpu() * (1.0 / disp_L[0].cpu().max()),) * 3, axis=0).squeeze()
+            coarse = disp_pred_coarse_left[0].detach().cpu()
+            mask = (coarse > self.max_disp) & (coarse < 0)
+            # coarse[mask] = 0
+
+            all = disp_pred_ref_left[0].detach().cpu()
+            mask = (all > self.max_disp) & (all < 0)
+            # all[mask] = 0
+
+            refined = res_disp_left[0].detach().cpu()
+            mask = (refined > self.max_disp) & (refined < 0)
+            # refined[mask] = 0
+
+            refinedOnlyOut = np.stack((refined * (1.0 / disp_L[0].cpu().max()),) *3, axis=0).squeeze()
+            overallOut = np.stack((all * (1.0 / disp_L[0].cpu().max()),) *3, axis=0).squeeze()
+            coarseOut = np.stack((coarse * (1.0 / disp_L[0].cpu().max()),) *3, axis=0).squeeze()
             gt = np.stack((disp_L[0].cpu() * (1.0 / disp_L[0].cpu().max()),) * 3, axis=0).squeeze()
-            coarseOut = disp_pred_coarse_left[0].detach().cpu()
-            mask = (coarseOut > self.max_disp) & (coarseOut < 0)
-            coarseOut[mask] = 0
 
-            overallOut = disp_pred_ref_left[0].detach().cpu()
-            mask = (overallOut > self.max_disp) & (overallOut < 0)
-            overallOut[mask] = 0
-
-            res_disp_left = res_disp_left[0].detach().cpu()
-            mask = (res_disp_left > self.max_disp) & (res_disp_left < 0)
-            res_disp_left[mask] = 0
-
-            refinedOnlyOut = np.stack((res_disp_left * (1.0 / gt.max()),) *3, axis=0).squeeze()
-            overallOut = np.stack((overallOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
-            coarseOut = np.stack((coarseOut * (1.0 / gt.max()),) *3, axis=0).squeeze()
-
-            reconstructedImagesCoarse =  torchvision.utils.make_grid([imgL[0], recon_img_left_coarse[0], recon_img_left_ref[0]])
-            reconstructedImagesRefine =  torchvision.utils.make_grid([imgR[0], recon_img_left_ref[0], recon_img_right_ref[0]])
+            images =  torchvision.utils.make_grid([imgL[0], recon_img_left_ref[0], imgR[0]])
+            # reconstructedImagesRefine =  torchvision.utils.make_grid([imgR[0], recon_img_left_ref[0], recon_img_right_ref[0]])
             dispMaps = torchvision.utils.make_grid([torch.Tensor(gt), torch.tensor(overallOut), torch.Tensor(coarseOut), torch.tensor(refinedOnlyOut)])
 
             if self.writer is None:
@@ -187,8 +227,7 @@ class TrainSolver(object):
 
             self.writer.add_scalar('Loss/Train', loss, self.global_step)
             self.writer.add_image("gt | coarse+refine | coarse | refine", dispMaps, self.global_step)
-            self.writer.add_image("left gt, recon coarse, recon final", reconstructedImagesCoarse, self.global_step)
-            self.writer.add_image("right gt, recon coarse, recon final", reconstructedImagesRefine, self.global_step)
+            self.writer.add_image("left, reconstructed left, right", images, self.global_step)
 
             # self.writer.add_histogram("coarse weights before last", self.model.module.CoarseNet.conv3d_4[0].weight, self.global_step)
             # self.writer.add_histogram("coarse weights last", self.model.module.CoarseNet.conv3d_5[0].weight, self.global_step)
@@ -203,6 +242,7 @@ class TrainSolver(object):
                 log_gradients_in_model(self.model.module, self.writer, self.global_step)
                 self.optimizer.step()
                 self.optimizer.zero_grad()
+                self.scheduler.step()
 
             elapsed = time.time() - start_time
             train_EPE_left_ref = epe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
@@ -227,7 +267,7 @@ class TrainSolver(object):
                 )
             )
 
-            self.scheduler.step()
+
             if self.global_step % self.cfg_solver['save_steps'] == 0 and not self.reloaded:
                 self.save_checkpoint()
                 print('')
@@ -341,23 +381,6 @@ def log_gradients_in_model(model, logger, step):
     for tag, value in model.named_parameters():
         if value.grad is not None and tag.find('weight') > 0:
             logger.add_histogram(tag + "/grad", value.grad.cpu(), step)
-
-def showImages(left, right, disp_L, estimatedDisp_L):
-    left_np = left.cpu().squeeze().permute(1, 2, 0).numpy()
-    right_np = right.cpu().squeeze().permute(1, 2, 0).numpy()
-    dispL_np = disp_L.cpu().squeeze().permute(0, 1).numpy()
-    estDispL_np = estimatedDisp_L.cpu().detach().squeeze().permute(0, 1).numpy()
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1, 4, 1)
-    ax2 = fig.add_subplot(1, 4, 2)
-    ax3 = fig.add_subplot(1, 4, 3)
-    ax4 = fig.add_subplot(1, 4, 4)
-    ax1.imshow(left_np,  cmap='gray')
-    ax2.imshow(right_np,  cmap='gray')
-    ax3.imshow(dispL_np,  cmap='gray')
-    ax4.imshow(estDispL_np,  cmap='gray')
-    plt.show()
-
 
 def showImages(data, rows, columns):
     fig = plt.figure(figsize=(rows, columns), dpi=100)
