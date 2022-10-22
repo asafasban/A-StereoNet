@@ -201,6 +201,7 @@ class TrainSolver(object):
             if self.global_step % self.cfg_solver['accumulate'] == 0:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
+                self.scheduler.step()
 
             # if self.global_step % self.cfg_solver['accumulate'] == 0:
                 # log_gradients_in_model(self.model.module, self.writer, self.global_step)
@@ -228,7 +229,7 @@ class TrainSolver(object):
                     elapsed
                 )
             )
-            self.scheduler.step()
+            # self.scheduler.step()
 
             if self.global_step % self.cfg_solver['save_steps'] == 0 and not self.reloaded:
                 self.save_checkpoint()

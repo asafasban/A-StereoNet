@@ -27,9 +27,9 @@
     "solver": {
         "batch_size": 2,
         "accumulate": 3,
-        "refine_head_weight": 0.50,
+        "refine_head_weight": 0.60,
         "lcn_weight": 1.0,
-        "occluded_weight": 0.5, // the unvalid (out of range) pixels contribution to lose
+        "occluded_weight": 0.01, // the unvalid (out of range) pixels contribution to lose
         "optimizer_type": "adam",
         "lr_init": 1e-4,
         "gamma": 0.5,
