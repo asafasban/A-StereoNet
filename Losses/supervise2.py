@@ -5,22 +5,6 @@ import torch.nn.functional as F
 from matplotlib import pyplot as plt
 import numpy as np
 
-def resample(grid, dispmap_view, img_to_resample, disp_to_resample, view_type='left'):
-    dispmap_view_norm = dispmap_view * 2 / img_to_resample.shape[-1]
-    dispmap_view_norm = dispmap_view_norm.cuda()
-    dispmap_view_norm = dispmap_view_norm.squeeze(1).unsqueeze(3)
-    dispmap_view_norm = torch.cat((dispmap_view_norm, torch.zeros(dispmap_view_norm.size()).cuda()), dim=3)
-    if view_type == 'left':    
-       grid_view = grid - dispmap_view_norm
-    elif view_type == 'right':    
-       grid_view = grid + dispmap_view_norm        
-    else:    
-       raise NotImplementedError('Incorrect view type: [{:s}]'.format(view_type))
-
-    recon_img = F.grid_sample(img_to_resample, grid_view)
-    recon_dispmap = F.grid_sample(disp_to_resample, grid_view)
-    return recon_img, recon_dispmap
-
 class RHLoss(nn.Module):
 
     def __init__(self, max_disp):
@@ -56,19 +40,37 @@ class XTLoss(nn.Module):
         self.crossEntropy = nn.CrossEntropyLoss(reduction='mean')
         self.lcn_weight = lcn_weight
         self.occluded_weight = occluded_weight
+    #
+    # def resample(grid, dispmap_view, img_to_resample, disp_to_resample, view_type='left'):
+    #     dispmap_view_norm = dispmap_view * 2 / img_to_resample.shape[-1]
+    #     dispmap_view_norm = dispmap_view_norm.cuda()
+    #     dispmap_view_norm = dispmap_view_norm.squeeze(1).unsqueeze(3)
+    #     dispmap_view_norm = torch.cat((dispmap_view_norm, torch.zeros(dispmap_view_norm.size()).cuda()), dim=3)
+    #     if view_type == 'left':
+    #         grid_view = grid - dispmap_view_norm
+    #     elif view_type == 'right':
+    #         grid_view = grid + dispmap_view_norm
+    #     else:
+    #         raise NotImplementedError('Incorrect view type: [{:s}]'.format(view_type))
+    #
+    #     recon_img = F.grid_sample(img_to_resample, grid_view)
+    #     recon_dispmap = F.grid_sample(disp_to_resample, grid_view)
+    #     return recon_img, recon_dispmap
+    #
 
-    
     def forward(self, left_img, right_img, dispmap_left, dispmap_right, dispmap_gt, weight):
         n, c, h, w = left_img.shape
         valid_gt = torch.ones(dispmap_left.shape[0], dispmap_left.shape[2], dispmap_left.shape[3]).long().cuda()
-        theta = self.theta.repeat(left_img.size()[0], 1, 1)
-        grid = F.affine_grid(theta, left_img.size())
-        grid = grid.cuda()
+        theta = self.theta.repeat(left_img.size()[0], 1, 1) # translation affine for every of the images in the batch
+        grid = F.affine_grid(theta, left_img.size())    # create a grid for every index
+        grid = grid.cuda() # grid is 2d homography,  -1,-1 <=> image index [0, 0], 1,1 <=> image index height-1, width-1
 
-        recon_img_left
+        # test
+        # recon_img_left_fromGt, recon_dispmap_left = utils.resample(grid, dispmap_gt, right_img, dispmap_right, disparity_map_direction='left2right')
+        # utils.plotData([left_img, recon_img_left_fromGt, right_img],['real left', 'left from Gt', 'real right'], 1, 3)
 
-        # recon_img_left, recon_dispmap_left = resample(grid, dispmap_gt, right_img, dispmap_gt, view_type='left')
-        recon_img_right, recon_dispmap_right = resample(grid, dispmap_gt, left_img, dispmap_gt, view_type='right')
+        recon_img_left, recon_dispmap_left = utils.resample(grid, dispmap_left, right_img, dispmap_right, disparity_map_direction='left2right')
+        recon_img_right, recon_dispmap_right = utils.resample(grid, dispmap_right, left_img, dispmap_left, disparity_map_direction='right2left')
 
         # utils.plotData([left_img, recon_img_left, right_img, dispmap_gt], ['real left', 'left from Gt', 'real right', 'diff left recon vs left gt'], 2, 2)
         losses_left_photo = torch.abs(((left_img - recon_img_right)))

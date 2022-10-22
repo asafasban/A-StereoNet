@@ -8,7 +8,6 @@ import torch.nn.functional as F
 import numpy as np
 from matplotlib import pyplot as plt
 
-
 def log_gradients_in_model(model, logger, step):
     for tag, value in model.named_parameters():
         if value.grad is not None and tag.find('weight') > 0:
@@ -40,3 +39,22 @@ def plotData(data, labels, rows, columns, filename=None):
         plt.savefig(filename)
     else:
         plt.show()
+
+
+def resample(grid, disparity_map, target_image, target_disparity, disparity_map_direction='left2right'):
+    dispNormed = disparity_map * 2 / target_image.shape[-1] # width
+    dispNormed = dispNormed.cuda()
+    dispNormed = dispNormed.squeeze(1).unsqueeze(3)
+    dispNormed = torch.cat((dispNormed, torch.zeros(dispNormed.size()).cuda()), dim=3)  # replicate for every image in the batch (the dispmap shift on the grid!)
+
+    # left to right -> taking right image, shifting its pixel to the left??????
+    if disparity_map_direction == 'left2right':
+        grid_view = grid - dispNormed   # reconstruction left image, right image indices should be lowered.
+    elif disparity_map_direction == 'right2left':
+        grid_view = grid + dispNormed
+    else:
+        raise NotImplementedError('Incorrect disparity_map_direction type: [{:s}]'.format(disparity_map_direction))
+
+    reconstructed = F.grid_sample(target_image, grid_view)
+    reconstructed_disparity = F.grid_sample(target_disparity, grid_view) # target disparity should be lower as well (with approximatly same value!)
+    return reconstructed, reconstructed_disparity

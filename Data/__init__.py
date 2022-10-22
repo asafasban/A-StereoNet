@@ -87,12 +87,10 @@ def create_dataset(cfg_data, mode, dset):
             T.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0))
         ])
 
-        dataset = TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode, cropSize)
-        dispRight = dataset._read_as_disp(r"D:\TartanDatasetRepository\TartanDataset\train\office\Easy\P000\depth_right\000000_right_depth.npy")
-        dispLeft = dataset._read_as_disp(r"D:\TartanDatasetRepository\TartanDataset\train\office\Easy\P000\depth_left\000000_left_depth.npy")
-        utils.plotData([dispLeft, dispRight],["disp left", "disp right"], 1, 2)
-
-
+        # dataset = TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode, cropSize)
+        # dispRight = dataset._read_as_disp(r"D:\TartanDatasetRepository\TartanDataset\train\office\Easy\P000\depth_right\000000_right_depth.npy")
+        # dispLeft = dataset._read_as_disp(r"D:\TartanDatasetRepository\TartanDataset\train\office\Easy\P000\depth_left\000000_left_depth.npy")
+        # utils.plotData([dispLeft, dispRight],["disp left", "disp right"], 1, 2)
         return TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode, cropSize)
     else:
         raise NotImplementedError("Can't create dataset [{:s}].".format(dset))

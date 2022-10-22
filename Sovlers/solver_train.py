@@ -373,11 +373,11 @@ def log_gradients_in_model(model, logger, step):
         if value.grad is not None and tag.find('weight') > 0:
             logger.add_histogram(tag + "/grad", value.grad.cpu(), step)
 
-def showImages(data, rows, columns):
-    fig = plt.figure(figsize=(rows, columns), dpi=100)
-    axes = []
-    for i in range(1, columns * rows + 1):
-        element = data[i - 1]
-        axes.append(fig.add_subplot(rows, columns, i))
-        axes[i - 1].imshow(data[i - 1])
-    plt.show()
+# def showImages(data, rows, columns):
+#     fig = plt.figure(figsize=(rows, columns), dpi=100)
+#     axes = []
+#     for i in range(1, columns * rows + 1):
+#         element = data[i - 1]
+#         axes.append(fig.add_subplot(rows, columns, i))
+#         axes[i - 1].imshow(data[i - 1])
+#     plt.show()

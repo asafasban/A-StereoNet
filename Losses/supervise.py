@@ -24,23 +24,21 @@ SOFTWARE.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from matplotlib import pyplot as plt
 import numpy as np
 
-# grid, dispmap_left, left_img, dispmap_right
 def resample(grid, dispmap_view, img_to_resample, disp_to_resample, view_type='left'):
     dispmap_view_norm = dispmap_view * 2 / img_to_resample.shape[-1]
     dispmap_view_norm = dispmap_view_norm.cuda()
     dispmap_view_norm = dispmap_view_norm.squeeze(1).unsqueeze(3)
     dispmap_view_norm = torch.cat((dispmap_view_norm, torch.zeros(dispmap_view_norm.size()).cuda()), dim=3)
-    
-    if view_type == 'left':    
+
+    if view_type == 'left':
        grid_view = grid - dispmap_view_norm
-    elif view_type == 'right':    
-       grid_view = grid + dispmap_view_norm        
-    else:    
+    elif view_type == 'right':
+       grid_view = grid + dispmap_view_norm
+    else:
        raise NotImplementedError('Incorrect view type: [{:s}]'.format(view_type))
-    
+
     recon_img = F.grid_sample(img_to_resample, grid_view)
     recon_dispmap = F.grid_sample(disp_to_resample, grid_view)
 
@@ -53,14 +51,14 @@ class RHLoss(nn.Module):
         super(RHLoss, self).__init__()
         self.max_disp = max_disp
         self.crit = nn.SmoothL1Loss(reduction='mean')
-    
+
     def forward(self, left_img, right_img, output, target, weight):
 
         mask = target < self.max_disp
         mask.detach_()
-        
+
         loss = self.crit(output[mask], target[mask])
-        
+
         return weight * loss
 
 class XTLoss(nn.Module):
@@ -73,7 +71,7 @@ class XTLoss(nn.Module):
         super(XTLoss, self).__init__()
         self.max_disp = max_disp
         self.theta = torch.Tensor(
-            [[1, 0, 0], 
+            [[1, 0, 0],
             [0, 1, 0]]
         )
         self.inplanes = 3
@@ -82,60 +80,19 @@ class XTLoss(nn.Module):
         self.lcn_weight = lcn_weight
         self.occluded_weight = occluded_weight
 
-    
+
     def forward(self, left_img, right_img, dispmap_left, dispmap_right, dispmap_gt, weight):
 
         n, c, h, w = left_img.shape
         valid_gt = torch.ones(dispmap_left.shape[0], dispmap_left.shape[2], dispmap_left.shape[3]).long().cuda()
+
         theta = self.theta.repeat(left_img.size()[0], 1, 1)
+
         grid = F.affine_grid(theta, left_img.size())
         grid = grid.cuda()
 
-        # reconst left with left and zero dispmap
-        # show left - reconstructed and expected full zeroes
-        # now take GT disp and reconstruct left, expect zeroes? see what happens!
-        theta = self.theta.repeat(left_img.size()[0], 1, 1)
-        grid = F.affine_grid(theta, left_img.size())
-        grid = grid.cuda()
-
-        dispmap_norm = dispmap_left * 2 / w
-        dispmap_norm = dispmap_norm.cuda()
-        dispmap_norm = dispmap_norm.squeeze(1).unsqueeze(3)
-        dispmap_norm = torch.cat((dispmap_norm, torch.zeros(dispmap_norm.size()).cuda()), dim=3)
-        grid -= dispmap_norm
-        reconstructedLeft = F.grid_sample(right_img, grid)
-
-        theta = self.theta.repeat(left_img.size()[0], 1, 1)
-        grid = F.affine_grid(theta, left_img.size())
-        grid = grid.cuda()
-
-        dispmap_norm_gt = dispmap_gt * 2 / w
-        dispmap_norm_gt = dispmap_norm_gt.cuda()
-        dispmap_norm_gt = dispmap_norm_gt.squeeze(1).unsqueeze(3)
-        dispmap_norm_gt = torch.cat((dispmap_norm_gt, torch.zeros(dispmap_norm_gt.size()).cuda()), dim=3)
-        grid -= dispmap_norm_gt
-        reconstructedLeftGt = F.grid_sample(right_img, grid)
-
-        fig, ax = plt.subplots(2, 3)
-        fig.set_size_inches(20, 20)
-
-        ax[0, 0].imshow(left_img[0].permute(1, 2, 0).cpu().detach().numpy());
-        ax[0, 0].set_title('real left')
-
-        ax[0, 1].imshow(reconstructedLeftGt[0].permute(1, 2, 0).cpu().detach().numpy());
-        ax[0, 1].set_title('left from Gt')
-
-        ax[0, 2].imshow(reconstructedLeft[0].permute(1, 2, 0).cpu().detach().numpy());
-        ax[0, 2].set_title('left from prediction')
-
-        diff_real_gt = np.abs(left_img[0].permute(1, 2, 0).cpu().detach().numpy() - reconstructedLeftGt[0].permute(1, 2, 0).cpu().detach().numpy())
-        ax[1, 0].imshow(diff_real_gt)
-        ax[1, 0].set_title('real - from GT')
-
-        plt.show()
-
-        recon_img_left, recon_dispmap_left = resample(grid, dispmap_right, right_img, dispmap_left, view_type='right')
-        recon_img_right, recon_dispmap_right = resample(grid, dispmap_left, left_img, dispmap_right, view_type='left')   #resample(grid, dispmap_view, img_to_resample, disp_to_resample, view_type='left'):
+        recon_img_right, recon_dispmap_right = resample(grid, dispmap_left, right_img, dispmap_right, view_type='left')
+        recon_img_left, recon_dispmap_left = resample(grid, dispmap_right, left_img, dispmap_left, view_type='right')
 
         losses_left_photo = torch.abs(((left_img - recon_img_right)))
         losses_right_photo = torch.abs(((right_img - recon_img_left)))
