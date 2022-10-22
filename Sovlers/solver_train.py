@@ -36,6 +36,7 @@ from Metrics.metrics import epe_metric_non_zero
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import numpy as np
+import gc
 from matplotlib import pyplot as plt
 from torchsummary import summary
 
@@ -57,7 +58,7 @@ class TrainSolver(object):
         self.loss_name = self.cfg_model['loss']
         self.train_loader, self.val_loader = get_loader(self.config)
         self.model = get_model(self.config)
-        self.crit = get_losses(self.loss_name, max_disp=self.max_disp, lcn_weight=self.cfg_solver['lcn_weight'], occluded_weight=self.cfg_solver['cross_entropy_weight'])
+        self.crit = get_losses(self.loss_name, max_disp=self.max_disp, lcn_weight=self.cfg_solver['lcn_weight'], occluded_weight=self.cfg_solver['occluded_weight'])
 
         if self.cfg_solver['optimizer_type'].lower() == 'rmsprop':
             self.optimizer = optim.RMSprop(self.model.parameters(), lr=self.cfg_solver['lr_init'])
@@ -117,7 +118,6 @@ class TrainSolver(object):
         if self.cfg_solver['resume_iter'] > 0:
             self.load_checkpoint()
             print('[{:d}] Model loaded.'.format(self.global_step))
-        
         data_iter = iter(self.train_loader)
         print_info = 1000
         tot_loss = 0.0
@@ -175,51 +175,42 @@ class TrainSolver(object):
                 ax[1, 1].imshow(recon_img_right_ref[0].permute(1, 2, 0).cpu().detach().numpy());
                 ax[1, 1].set_title('reconstructed right')
 
-                ax[1, 2].imshow(disp_L[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
+                ax[1, 2].imshow(disp_L[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
                 ax[1, 2].set_title('GT disparity')
 
-                ax[2, 0].imshow(disp_pred_coarse_left[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
-                ax[2, 0].set_title('Coarse only right')
+                ax[2, 0].imshow(disp_pred_coarse_left[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
+                ax[2, 0].set_title('Coarse only left')
 
-                ax[2, 1].imshow(res_disp_left[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
+                ax[2, 1].imshow(res_disp_left[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
                 ax[2, 1].set_title('refined only left')
 
-                ax[2, 2].imshow(disp_pred_ref_left[0, 0].cpu().detach().numpy(), vmin=0, vmax=self.max_disp)
+                ax[2, 2].imshow(disp_pred_ref_left[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp)
                 ax[2, 2].set_title('Coarse + Refine')
 
                 file = os.path.join(dir, str(self.global_step) + '_.png')
                 # plt.show()
                 fig.savefig(file)
 
-
-            # left = imgL[0].permute(1, 2, 0).cpu().detach().numpy()
-            # right = imgR[0].permute(1, 2, 0).cpu().detach().numpy()
-            # coarse = disp_pred_coarse_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            # residual = res_disp_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            # overall = disp_pred_ref_left[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            # gt = disp_L[0].detach().cpu().squeeze().permute(0, 1).numpy()
-            # showImages([left, right, gt, coarse, residual, overall], 2, 3)
-
-            # gt = np.stack((disp_L[0].cpu() * (1.0 / disp_L[0].cpu().max()),) * 3, axis=0).squeeze()
             coarse = disp_pred_coarse_left[0].detach().cpu()
             mask = (coarse > self.max_disp) & (coarse < 0)
-            # coarse[mask] = 0
+            coarse[mask] = 0
 
             all = disp_pred_ref_left[0].detach().cpu()
             mask = (all > self.max_disp) & (all < 0)
-            # all[mask] = 0
+            all[mask] = 0
 
             refined = res_disp_left[0].detach().cpu()
             mask = (refined > self.max_disp) & (refined < 0)
-            # refined[mask] = 0
+            refined[mask] = 0
 
-            refinedOnlyOut = np.stack((refined * (1.0 / disp_L[0].cpu().max()),) *3, axis=0).squeeze()
-            overallOut = np.stack((all * (1.0 / disp_L[0].cpu().max()),) *3, axis=0).squeeze()
-            coarseOut = np.stack((coarse * (1.0 / disp_L[0].cpu().max()),) *3, axis=0).squeeze()
-            gt = np.stack((disp_L[0].cpu() * (1.0 / disp_L[0].cpu().max()),) * 3, axis=0).squeeze()
+            maxVal = disp_L[0].cpu().max()
+
+            refinedOnlyOut = np.stack((refined * (1.0 / maxVal),) *3, axis=0).squeeze()
+            overallOut = np.stack((all * (1.0 / maxVal),) *3, axis=0).squeeze()
+            coarseOut = np.stack((coarse * (1.0 / maxVal),) *3, axis=0).squeeze()
+            gt = np.stack((disp_L[0].cpu() * (1.0 / maxVal.max()),) * 3, axis=0).squeeze()
 
             images =  torchvision.utils.make_grid([imgL[0], recon_img_left_ref[0], imgR[0]])
-            # reconstructedImagesRefine =  torchvision.utils.make_grid([imgR[0], recon_img_left_ref[0], recon_img_right_ref[0]])
             dispMaps = torchvision.utils.make_grid([torch.Tensor(gt), torch.tensor(overallOut), torch.Tensor(coarseOut), torch.tensor(refinedOnlyOut)])
 
             if self.writer is None:
@@ -229,20 +220,20 @@ class TrainSolver(object):
             self.writer.add_image("gt | coarse+refine | coarse | refine", dispMaps, self.global_step)
             self.writer.add_image("left, reconstructed left, right", images, self.global_step)
 
-            # self.writer.add_histogram("coarse weights before last", self.model.module.CoarseNet.conv3d_4[0].weight, self.global_step)
-            # self.writer.add_histogram("coarse weights last", self.model.module.CoarseNet.conv3d_5[0].weight, self.global_step)
+            self.writer.add_histogram("coarse weights before last", self.model.module.CoarseNet.conv3d_4[0].weight, self.global_step)
+            self.writer.add_histogram("coarse weights last", self.model.module.CoarseNet.conv3d_5[0].weight, self.global_step)
 
-            # self.writer.add_histogram("refine weights before last", self.model.module.RefineNet.resblock6.conv[0].weight, self.global_step)
-            # self.writer.add_histogram("refine weights", self.model.module.RefineNet.conv2[0].weight, self.global_step)
+            self.writer.add_histogram("refine weights before last", self.model.module.RefineNet.resblock6.conv[0].weight, self.global_step)
+            self.writer.add_histogram("refine weights", self.model.module.RefineNet.conv2[0].weight, self.global_step)
 
-            # self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)
-            # self.writer.add_histogram("refine out", activation['refine activation map distribution (full disparity values)'], self.global_step)
+            self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)
+            self.writer.add_histogram("refine out", activation['refine activation map distribution (full disparity values)'], self.global_step)
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
-            if self.global_step % self.cfg_solver['accumulate'] == 0:
-                log_gradients_in_model(self.model.module, self.writer, self.global_step)
-                self.optimizer.step()
-                self.optimizer.zero_grad()
-                self.scheduler.step()
+            # if self.global_step % self.cfg_solver['accumulate'] == 0:
+                # log_gradients_in_model(self.model.module, self.writer, self.global_step)
+
 
             elapsed = time.time() - start_time
             train_EPE_left_ref = epe_metric(disp_L.detach(), disp_pred_ref_left.detach(), self.max_disp)
@@ -267,7 +258,7 @@ class TrainSolver(object):
                 )
             )
 
-
+            self.scheduler.step()
             if self.global_step % self.cfg_solver['save_steps'] == 0 and not self.reloaded:
                 self.save_checkpoint()
                 print('')

@@ -27,6 +27,7 @@ import torchvision.transforms as T
 from torch.utils.data import DataLoader
 from .SLAMcore import SLAMcoreDataset
 from .TartanAir import TartanAirDataset
+import utils
 
 def get_loader(config):
 
@@ -73,7 +74,7 @@ def create_dataset(cfg_data, mode, dset):
     npy_root = cfg_data['npy_root']
     test_split = cfg_data['test_split']
     val_split = cfg_data['val_split']
-    
+
     if dset == 'slamcore':
         transform = T.Compose([
             T.ToTensor(),
@@ -85,6 +86,13 @@ def create_dataset(cfg_data, mode, dset):
             T.ToTensor(),
             T.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0))
         ])
+
+        dataset = TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode, cropSize)
+        dispRight = dataset._read_as_disp(r"D:\TartanDatasetRepository\TartanDataset\train\office\Easy\P000\depth_right\000000_right_depth.npy")
+        dispLeft = dataset._read_as_disp(r"D:\TartanDatasetRepository\TartanDataset\train\office\Easy\P000\depth_left\000000_left_depth.npy")
+        utils.plotData([dispLeft, dispRight],["disp left", "disp right"], 1, 2)
+
+
         return TartanAirDataset(data_root, npy_root, val_split, test_split, transform, mode, cropSize)
     else:
         raise NotImplementedError("Can't create dataset [{:s}].".format(dset))
