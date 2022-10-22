@@ -36,7 +36,7 @@ from Metrics.metrics import epe_metric_non_zero
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import numpy as np
-import gc
+import utils
 from matplotlib import pyplot as plt
 from torchsummary import summary
 
@@ -157,39 +157,8 @@ class TrainSolver(object):
                 if not os.path.exists(dir):
                     os.makedirs(dir)
 
-                fig, ax = plt.subplots(3, 3)
-                fig.set_size_inches(20, 20)
-
-                ax[0, 0].imshow(imgL[0].permute(1, 2, 0).cpu().detach().numpy());
-                ax[0, 0].set_title('left')
-
-                ax[0, 1].imshow(recon_img_left_ref[0].permute(1, 2, 0).cpu().detach().numpy());
-                ax[0, 1].set_title('reconstructed left')
-
-                ax[0, 2].imshow(np.abs(imgL[0].permute(1, 2, 0).cpu().detach().numpy() - recon_img_left_ref[0].permute(1, 2, 0).cpu().detach().numpy()))
-                ax[0, 2].set_title('left - reconstructed left')
-
-                ax[1, 0].imshow(imgR[0].permute(1, 2, 0).cpu().detach().numpy());
-                ax[1, 0].set_title('right')
-
-                ax[1, 1].imshow(recon_img_right_ref[0].permute(1, 2, 0).cpu().detach().numpy());
-                ax[1, 1].set_title('reconstructed right')
-
-                ax[1, 2].imshow(disp_L[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
-                ax[1, 2].set_title('GT disparity')
-
-                ax[2, 0].imshow(disp_pred_coarse_left[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
-                ax[2, 0].set_title('Coarse only left')
-
-                ax[2, 1].imshow(res_disp_left[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp);
-                ax[2, 1].set_title('refined only left')
-
-                ax[2, 2].imshow(disp_pred_ref_left[0].permute(1, 2, 0).cpu().detach().numpy(), vmin=0, vmax=self.max_disp)
-                ax[2, 2].set_title('Coarse + Refine')
-
                 file = os.path.join(dir, str(self.global_step) + '_.png')
-                # plt.show()
-                fig.savefig(file)
+                utils.plotData([disp_pred_ref_left, disp_L], ['prediction disp', 'gt disp'], 1, 2, filename=file)
 
             coarse = disp_pred_coarse_left[0].detach().cpu()
             mask = (coarse > self.max_disp) & (coarse < 0)
@@ -228,8 +197,10 @@ class TrainSolver(object):
 
             self.writer.add_histogram("coarse out", activation['coarse activation maps distribution (full disparity values)'], self.global_step)
             self.writer.add_histogram("refine out", activation['refine activation map distribution (full disparity values)'], self.global_step)
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+
+            if self.global_step % self.cfg_solver['accumulate'] == 0:
+                self.optimizer.step()
+                self.optimizer.zero_grad()
 
             # if self.global_step % self.cfg_solver['accumulate'] == 0:
                 # log_gradients_in_model(self.model.module, self.writer, self.global_step)
@@ -257,8 +228,8 @@ class TrainSolver(object):
                     elapsed
                 )
             )
-
             self.scheduler.step()
+
             if self.global_step % self.cfg_solver['save_steps'] == 0 and not self.reloaded:
                 self.save_checkpoint()
                 print('')
