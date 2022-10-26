@@ -24,6 +24,7 @@ SOFTWARE.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import utils
 import numpy as np
 
 def resample(grid, dispmap_view, img_to_resample, disp_to_resample, view_type='left'):
@@ -91,38 +92,41 @@ class XTLoss(nn.Module):
         grid = F.affine_grid(theta, left_img.size())
         grid = grid.cuda()
 
-        recon_img_right, recon_dispmap_right = resample(grid, dispmap_left, right_img, dispmap_right, view_type='left')
-        recon_img_left, recon_dispmap_left = resample(grid, dispmap_right, left_img, dispmap_left, view_type='right')
+        reconstructed_left_image, reconstructed_left_dispmap = resample(grid, dispmap_left, right_img, dispmap_right, view_type='left')
+        reconstructed_right_image, reconstructed_right_dispmap = resample(grid, dispmap_right, left_img, dispmap_left, view_type='right')
 
-        losses_left_photo = torch.abs(((left_img - recon_img_right)))
-        losses_right_photo = torch.abs(((right_img - recon_img_left)))
+        # reconstructed_left_image_gt, reconstructed_left_dispmap = resample(grid, dispmap_gt, right_img, dispmap_right, view_type='left')
+        # utils.plotData([left_img, reconstructed_left_image_gt, right_img],['real left', 'left from Gt', 'real right'], 1, 3)
 
-        #""" weighted LCN 
+        losses_left_photo = torch.abs(((left_img - reconstructed_left_image)))
+        losses_right_photo = torch.abs(((right_img - reconstructed_right_image)))
+
+        # """ weighted LCN
         if self.lcn_weight > 0.0:
-            recon_img_right_LCN, _, _ = self.LCN(recon_img_right, 9)
-            recon_img_left_LCN, _, _ = self.LCN(recon_img_left, 9)        
+            recon_img_right_LCN, _, _ = self.LCN(reconstructed_right_image, 9)
+            recon_img_left_LCN, _, _ = self.LCN(reconstructed_left_image, 9)
             left_img_LCN, _, left_std_local = self.LCN(left_img, 9)
             right_img_LCN, _, right_std_local = self.LCN(right_img, 9)
 
             losses_left_LCN = torch.abs(((left_img_LCN - recon_img_right_LCN) * left_std_local))
-            losses_left_LCN = self.ASW(left_img, losses_left_LCN, 12, 2)  
+            losses_left_LCN = self.ASW(left_img, losses_left_LCN, 12, 2)
             losses_right_LCN = torch.abs(((right_img_LCN - recon_img_left_LCN) * right_std_local))
-            losses_right_LCN = self.ASW(left_img, losses_right_LCN, 12, 2) 
+            losses_right_LCN = self.ASW(left_img, losses_right_LCN, 12, 2)
         else:
             losses_left_LCN = torch.zeros_like(losses_left_photo)
             losses_right_LCN = torch.zeros_like(losses_right_photo)
 
         losses_left = (1 - self.lcn_weight) * losses_left_photo + self.lcn_weight * losses_left_LCN
-        losses_right = (1-  self.lcn_weight) * losses_right_photo + self.lcn_weight * losses_right_LCN
-        #"""
+        losses_right = (1 - self.lcn_weight) * losses_right_photo + self.lcn_weight * losses_right_LCN
+        # """
 
-        #""" Occluded pixels
+        # """ Occluded pixels
         if self.occluded_weight > 0.0:
-            dispmap_left_diff = (dispmap_left - recon_dispmap_right).abs()        
-            valid_pred_left_prob = torch.exp(-0.6931 * dispmap_left_diff.clamp(min=0.0)) #
+            dispmap_left_diff = (dispmap_left - reconstructed_left_dispmap).abs()
+            valid_pred_left_prob = torch.exp(-0.6931 * dispmap_left_diff.clamp(min=0.0))  #
 
-            dispmap_right_diff = (dispmap_right - recon_dispmap_left).abs()        
-            valid_pred_right_prob = torch.exp(-0.6931 * dispmap_right_diff.clamp(min=0.0)) #
+            dispmap_right_diff = (dispmap_right - reconstructed_right_dispmap).abs()
+            valid_pred_right_prob = torch.exp(-0.6931 * dispmap_right_diff.clamp(min=0.0))  #
         else:
             valid_pred_left_prob = valid_gt.unsqueeze(1).float()
             valid_pred_right_prob = valid_gt.unsqueeze(1).float()
@@ -140,7 +144,7 @@ class XTLoss(nn.Module):
         loss = weight * ((1 - self.occluded_weight) * loss_valid + self.occluded_weight * loss_invalid)
 
         assert not torch.isnan(loss)
-        return loss, recon_img_left, recon_img_right
+        return loss, reconstructed_left_image, reconstructed_right_image
 
 
     def LCN(self, img, kSize):

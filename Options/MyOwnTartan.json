@@ -27,11 +27,11 @@
     "solver": {
         "batch_size": 2,
         "accumulate": 3,
-        "refine_head_weight": 0.60,
+        "refine_head_weight": 0.75,
         "lcn_weight": 1.0,
-        "occluded_weight": 0.01, // the unvalid (out of range) pixels contribution to lose
-        "optimizer_type": "adam",
-        "lr_init": 1e-4,
+        "occluded_weight": 0, // the unvalid (out of range) pixels contribution to lose
+        "optimizer_type": "RMSProp",
+        "lr_init": 5e-7,
         "gamma": 0.5,
         "SaveImagesInterval": 200,
         "milestones": [60000, 100000],
