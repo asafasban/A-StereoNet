@@ -205,12 +205,12 @@ class ActiveStereoNet(nn.Module):
             right_tower = torch.flip(right_tower, dims=(3,))
         coarseup_pred_left, coarseup_pred_right = self.CoarseNet(left_tower, right_tower, do_right)
         res_disp_left = self.RefineNet(left, coarseup_pred_left)
-        ref_pred_left = nn.LeakyReLU(0.3, False)(coarseup_pred_left + res_disp_left)
-        coarseup_pred_left = nn.LeakyReLU(0.3, False)(coarseup_pred_left)
+        ref_pred_left = nn.ReLU(False)(coarseup_pred_left + res_disp_left)
+        coarseup_pred_left = nn.ReLU(False)(coarseup_pred_left)
         if do_right:
             res_disp_right = self.RefineNet(right, coarseup_pred_right)
-            ref_pred_right = nn.LeakyReLU(0.3, False)(coarseup_pred_right + res_disp_right)
-            coarseup_pred_right = nn.LeakyReLU(0.3, False)(coarseup_pred_right)
+            ref_pred_right = nn.ReLU(False)(coarseup_pred_right + res_disp_right)
+            coarseup_pred_right = nn.ReLU(False)(coarseup_pred_right)
             return ref_pred_left, coarseup_pred_left, ref_pred_right, coarseup_pred_right, res_disp_left, res_disp_right
         else:
             return ref_pred_left, coarseup_pred_left, ref_pred_left, coarseup_pred_left, res_disp_left, res_disp_left

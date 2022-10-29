@@ -94,6 +94,7 @@ class XTLoss(nn.Module):
 
         reconstructed_left_image, reconstructed_left_dispmap = resample(grid, dispmap_left, right_img, dispmap_right, view_type='left')
         reconstructed_right_image, reconstructed_right_dispmap = resample(grid, dispmap_right, left_img, dispmap_left, view_type='right')
+        # utils.plotData([left_img, reconstructed_left_image, right_img, dispmap_left],['real left', 'left from prediction (left disp)', 'real right', 'dispmapLeft'],2 , 2)
 
         # reconstructed_left_image_gt, reconstructed_left_dispmap = resample(grid, dispmap_gt, right_img, dispmap_right, view_type='left')
         # utils.plotData([left_img, reconstructed_left_image_gt, right_img],['real left', 'left from Gt', 'real right'], 1, 3)
