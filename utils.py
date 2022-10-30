@@ -25,15 +25,15 @@ def plotData(data, labels, rows, columns, filename=None):
     fig.set_size_inches(20, 20)
     for i in range(0, rows):
         for j in range(0, columns):
-            value = data[rows * i + j]
-            if not type(value).__module__ == np.__name__:
-                value = value[0].permute(1, 2, 0).cpu().detach().numpy()
-            else:
-                value = value.squeeze()
+                value = data[(rows+1) * i + j]
+                if not type(value).__module__ == np.__name__:
+                    value = value[0].permute(1, 2, 0).cpu().detach().numpy()
+                else:
+                    value = value.squeeze()
 
-            label = labels[rows * i + j]
-            ax[i, j].imshow(value)
-            ax[i, j].set_title(label)
+                label = labels[(rows+1) * i + j]
+                ax[i, j].imshow(value)
+                ax[i, j].set_title(label)
 
     if filename is not None:
         plt.savefig(filename)

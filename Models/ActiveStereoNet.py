@@ -111,10 +111,9 @@ class CoarseNet(nn.Module):
 
     def Coarsepred(self, cost):
         cost = self.conv3d_1(cost)
-        cost = self.conv3d_2(cost) + cost
-        cost = self.conv3d_3(cost) + cost
-        cost = self.conv3d_4(cost) + cost
-        
+        cost = self.conv3d_2(cost)
+        cost = self.conv3d_3(cost)
+        cost = self.conv3d_4(cost)
         cost = self.conv3d_5(cost) # before for every depth/activation(32) we had 144/18 scores of disparity. after this layer it has 1 activation per disparity option
         cost = F.interpolate(cost, size=[self.maxdisp, self.img_shape[1], self.img_shape[0]], mode='trilinear', align_corners=False) # upsample to [batch, depth=1, width, height]
         pred = cost.softmax(dim=2).squeeze(dim=1) # create probability for each disparity value
@@ -132,7 +131,7 @@ class CoarseNet(nn.Module):
         pred_left = self.Coarsepred(cost_left)
 
         if do_right:
-            cost_right = self.costVolume(refimg_fea, targetimg_fea, 'right')
+            cost_right = self.costVolume(targetimg_fea, refimg_fea, 'right')
             pred_right = self.Coarsepred(cost_right)
 
             return pred_left, pred_right
@@ -195,7 +194,7 @@ class ActiveStereoNet(nn.Module):
         self.img_shpae = img_shape
       
     def forward(self, left, right, disp_left, do_right=True):
-        flip = (np.random.rand() > 0.5)
+        flip = False #(np.random.rand() > 0.5)
         if flip:
             left = torch.flip(left, dims=(3,))
             right = torch.flip(right, dims=(3,))
@@ -206,14 +205,13 @@ class ActiveStereoNet(nn.Module):
             right = torch.flip(right, dims=(3,))
             left_tower = torch.flip(left_tower, dims=(3,))
             right_tower = torch.flip(right_tower, dims=(3,))
+
         coarseup_pred_left, coarseup_pred_right = self.CoarseNet(left_tower, right_tower, do_right)
         res_disp_left = self.RefineNet(left, coarseup_pred_left)
-        ref_pred_left = nn.LeakyReLU(0.4, False)(coarseup_pred_left + res_disp_left)
-        coarseup_pred_left = nn.LeakyReLU(0.4, False)(coarseup_pred_left)
+        ref_pred_left = coarseup_pred_left + res_disp_left
         if do_right:
             res_disp_right = self.RefineNet(right, coarseup_pred_right)
-            ref_pred_right = nn.LeakyReLU(0.4, False)(coarseup_pred_right + res_disp_right)
-            coarseup_pred_right = nn.LeakyReLU(0.4, False)(coarseup_pred_right)
+            ref_pred_right = coarseup_pred_right + res_disp_right
             return ref_pred_left, coarseup_pred_left, ref_pred_right, coarseup_pred_right, res_disp_left, res_disp_right
         else:
             return ref_pred_left, coarseup_pred_left, ref_pred_left, coarseup_pred_left, res_disp_left, res_disp_left

@@ -161,16 +161,16 @@ class TrainSolver(object):
                 utils.plotData([disp_pred_ref_left, disp_L], ['prediction disp', 'gt disp'], 1, 2, filename=file)
 
             coarse = disp_pred_coarse_left[0].detach().cpu()
-            mask = (coarse > self.max_disp) & (coarse < 0)
-            coarse[mask] = 0
+            # mask = (coarse > self.max_disp) & (coarse < 0)
+            # coarse[mask] = 0
 
             all = disp_pred_ref_left[0].detach().cpu()
-            mask = (all > self.max_disp) & (all < 0)
-            all[mask] = 0
+            # mask = (all > self.max_disp) & (all < 0)
+            # all[mask] = 0
 
             refined = res_disp_left[0].detach().cpu()
-            mask = (refined > self.max_disp) & (refined < 0)
-            refined[mask] = 0
+            # mask = (refined > self.max_disp) & (refined < 0)
+            # refined[mask] = 0   # Negative is zero....
 
             maxVal = disp_L[0].cpu().max()
 

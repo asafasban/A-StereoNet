@@ -86,18 +86,21 @@ class XTLoss(nn.Module):
 
         n, c, h, w = left_img.shape
         valid_gt = torch.ones(dispmap_left.shape[0], dispmap_left.shape[2], dispmap_left.shape[3]).long().cuda()
-
         theta = self.theta.repeat(left_img.size()[0], 1, 1)
-
         grid = F.affine_grid(theta, left_img.size())
         grid = grid.cuda()
 
+        # dispmap left and dispmap right contain same values but in different locations spatially
         reconstructed_left_image, reconstructed_left_dispmap = resample(grid, dispmap_left, right_img, dispmap_right, view_type='left')
         reconstructed_right_image, reconstructed_right_dispmap = resample(grid, dispmap_right, left_img, dispmap_left, view_type='right')
         # utils.plotData([left_img, reconstructed_left_image, right_img, dispmap_left],['real left', 'left from prediction (left disp)', 'real right', 'dispmapLeft'],2 , 2)
 
-        # reconstructed_left_image_gt, reconstructed_left_dispmap = resample(grid, dispmap_gt, right_img, dispmap_right, view_type='left')
-        # utils.plotData([left_img, reconstructed_left_image_gt, right_img],['real left', 'left from Gt', 'real right'], 1, 3)
+        # reconstructed_left_image_gt, reconstructed_left_dispmap = resample(grid, dispmap_gt, right_img, dispmap_gt, view_type='left')
+        # reconstructed_right_image_gt, reconstructed_right_dispmap = resample(grid, dispmap_gt, left_img, dispmap_gt, view_type='right')
+        # utils.plotData([left_img, reconstructed_left_image_gt, right_img, dispmap_gt, reconstructed_left_dispmap, dispmap_gt - reconstructed_left_dispmap],
+        #                ['real left', 'left from Gt', 'real right', 'gt left', 'reconstructed gt left', 'diff left disps'], 2, 3)
+        # utils.plotData([right_img, reconstructed_right_image_gt, left_img, dispmap_gt, reconstructed_right_dispmap, dispmap_gt - reconstructed_right_dispmap],
+        #                ['real right', 'right from Gt', 'real left', 'gt right', 'reconstructed gt right', 'diff right disps'], 2, 3)
 
         losses_left_photo = torch.abs(((left_img - reconstructed_left_image)))
         losses_right_photo = torch.abs(((right_img - reconstructed_right_image)))
